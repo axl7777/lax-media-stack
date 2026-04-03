@@ -1,0 +1,62 @@
+services:
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    volumes:
+    - /proc:/host/proc:ro
+    - /sys:/host/sys:ro
+    - /:/rootfs:ro
+    command:
+    - --path.procfs=/host/proc
+    - --path.rootfs=/rootfs
+    - --path.sysfs=/host/sys
+    - --path.udev.data=/rootfs/run/udev/data
+    - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    ports:
+    - 9100:9100
+    labels:
+    - wud.watch=true
+    - wud.trigger.docker.apply=true
+
+  dozzle-lax:
+    container_name: dozzle-lax
+    restart: unless-stopped
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+    - 7007:7007
+    image: amir20/dozzle:latest
+    group_add:
+    - "987"
+    command: agent --hostname lax
+    labels:
+    - wud.watch=true
+    - wud.trigger.docker.apply=true
+
+  beszel-agent:
+    image: henrygd/beszel-agent
+    container_name: beszel-agent
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      PORT: 45876
+      KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICUy1Dzjmk7uvehgibKpcw5N9aGWMGmBnT4r//cHZ2YV
+    labels:
+    - wud.watch=true
+    - wud.trigger.docker.apply=true
+
+  dex:
+    image: spx01/dex
+    container_name: dex
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+    - 8386:8080
+    restart: unless-stopped
+    labels:
+    - wud.watch=true
+    - wud.trigger.docker.apply=true

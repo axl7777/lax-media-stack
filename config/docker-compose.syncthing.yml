@@ -1,0 +1,43 @@
+---
+networks:
+  wtraefik:
+    external: true
+
+volumes:
+  dl:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=mercure.home,rw,vers=4.1
+      device: ":/volume1/media/dl/seedhost.eu"
+
+  ultra:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=mercure.home,rw,vers=4.1
+      device: ":/volume1/media/dl/ultra.cc"
+
+services:
+  syncthing:
+    image: lscr.io/linuxserver/syncthing:latest
+    container_name: syncthing
+    # hostname: syncthing #optional
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    volumes:
+      - ./config:/config
+      - dl:/downloads
+      - ultra:/ultra
+    ports:
+      - 8384:8384
+      - 22000:22000/tcp
+      - 22000:22000/udp
+      - 21027:21027/udp
+    restart: unless-stopped
+    networks:
+      - wtraefik
+    labels:
+      - "traefik.enable=true"

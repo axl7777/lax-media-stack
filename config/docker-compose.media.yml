@@ -1,0 +1,101 @@
+---
+networks:
+  wtraefik:
+    external: true
+    name: wtraefik
+
+volumes:
+  media:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=mercure.home,rw,vers=4.1
+      device: ":/volume1/media"
+  dl:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=mercure.home,rw,vers=4.1
+      device: ":/volume1/media/dl"
+  ultra:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=mercure.home,rw,vers=4.1
+      device: ":/volume1/media/dl/ultra.cc"
+  plex:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=mercure.home,rw,vers=4.1
+      device: ":/volume2/plex/Library/Application\ Support/Plex\ Media\ Server/Logs"
+
+
+services:
+
+  decluttarr:
+    image: ghcr.io/manimatter/decluttarr:latest
+    container_name: decluttarr
+    restart: always
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - ./decluttarr/config.yaml:/app/config/config.yaml
+      - ./decluttarr/logs:/app/logs # Uncomment to get logs in text file, too
+      - media:/media # If you use detect_deletions, add the identical mount paths that you use in your sonarr/radarr instances. This may be different to this example!
+
+
+  pulsarr:
+    image: lakker/pulsarr:latest
+    container_name: pulsarr
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./pulsarr:/app/data
+      - .env:/app/.env
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - wtraefik
+    labels:
+      - "traefik.enable=true"
+      # - "traefik.http.middlewares.pulsarr-headers.headers.customResponseHeaders.X-Frame-Options="
+      # - "traefik.http.routers.pulsarr.middlewares=pulsarr-headers@docker"
+
+
+  # watchlistarr:
+  #   image: nylonee/watchlistarr
+  #   container_name: watchlistarr
+  #   mem_limit: 1024m
+  #   # environment:
+  #   #   LOG_LEVEL: DEBUG
+  #   volumes:
+  #     - ./watchlistarr:/app/config
+  #   restart: unless-stopped
+  #   labels:
+  #   networks:
+  #     - wtraefik
+
+  kitana:
+    image: pannal/kitana:latest
+    container_name: kitana
+    volumes:
+      - $ROOT/kitana:/app/data
+    ports:
+      - 31337:31337
+    command: -B 0.0.0.0:31337 -P
+    restart: unless-stopped
+    networks:
+      - wtraefik
+
+  kometa:
+    image: kometateam/kometa
+    container_name: kometa
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+    # TODO: Complete service definition
